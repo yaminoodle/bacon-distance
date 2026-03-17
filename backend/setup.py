@@ -6,5 +6,5 @@ setup(
     description="A backend with an API to calculate 'Bacon Distance'.",
     author="Binyamin Wieder",
     packages=find_packages(),
-    install_requires=["polars"],
+    install_requires=["polars", "fastapi[standard]"],
 )
