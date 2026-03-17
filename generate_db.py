@@ -1,52 +1,70 @@
 import json
 
-from actor import Actor
-from movie import Movie
-from movie_json_encoder import MovieJSONEncoder
+import polars as pl
 
 
 def generate_db() -> None:
-    db_data = {
-        "movies": {
-            "Apollo 13": Movie(
-                "Apollo 13",
-                [
-                    "Tom Hanks",
-                    "Bill Paxton",
-                    "Kevin Bacon",
-                    "Gary Sinise",
-                    "Ed Harris",
-                ],
-            ),
-            "The Green Mile": Movie(
-                "The Green Mile",
-                [
-                    "Tom Hanks",
-                    "Michael Clarke Duncan",
-                    "David Morse",
-                    "Bonnie Hunt",
-                ],
-            ),
-            "The Truman Show": Movie(
-                "The Truman Show", ["Jim Carrey", "Ed Harris", "Laura Linney"]
-            ),
-        },
-        "actors": {
-            "Michael Clarke Duncan": Actor("Michael Clarke Duncan", 1),
-            "David Morse": Actor("David Morse", 1),
-            "Bonnie Hunt": Actor("Bonnie Hunt", 1),
-            "Jim Carrey": Actor("Jim Carrey", 1),
-            "Gary Sinise": Actor("Gary Sinise", 1),
-            "Ed Harris": Actor("Ed Harris", 2),
-            "Laura Linney": Actor("Laura Linney", 1),
-            "Bill Paxton": Actor("Bill Paxton", 1),
-            "Tom Hanks": Actor("Tom Hanks", 2),
-            "Kevin Bacon": Actor("Kevin Bacon", 1),
-        },
-    }
+    print("Reading movies...")
+    movies_data_frame = pl.read_csv(
+        "imdb_api/onek.title.basics.tsv",
+        separator="\t",
+        null_values="\\N",
+        quote_char=None,
+        columns=["tconst", "primaryTitle"],
+        new_columns=["id", "name"],
+    )
 
+    print("Reading actors...")
+    actors_data_frame = pl.read_csv(
+        "imdb_api/onek.name.basics.tsv",
+        separator="\t",
+        null_values="\\N",
+        quote_char=None,
+        columns=["nconst", "primaryName", "knownForTitles"],
+        new_columns=["id", "name", "known_for_movies"],
+    )
+
+    print("Splitting known_for_movies into a list...")
+    actors_data_frame = actors_data_frame.with_columns(
+        pl.col("known_for_movies").str.split(by=",")
+    )
+
+    print("Calculating actors_in_movies dict...")
+    actors_in_movies: dict[str, set[str]] = {}
+    for actor in actors_data_frame.iter_rows(named=True):
+        if actor["known_for_movies"] == None:
+            continue
+
+        for movie in actor["known_for_movies"]:
+            actors_in_movies[movie] = actors_in_movies.setdefault(movie, set()) | {
+                actor["name"]
+            }
+
+    print("Adding actors column to movies_data_frame...")
+
+    def get_actors_in_movie(movie_id) -> list[str]:
+        actors_list = list(actors_in_movies.setdefault(movie_id, set()))
+
+        del actors_in_movies[movie_id]
+
+        return actors_list
+
+    movies_data_frame = movies_data_frame.with_columns(
+        pl.col("id")
+        .map_elements(get_actors_in_movie, return_dtype=pl.List(pl.String))
+        .alias("actors")
+    )
+
+    print("Writing to output file...")
     with open("db.json", "wt") as db_file:
-        db_file.write(json.dumps(db_data, cls=MovieJSONEncoder))
+        db_file.write(
+            json.dumps(
+                {
+                    "movies": movies_data_frame.serialize(format="json"),
+                    "actors": actors_data_frame.serialize(format="json"),
+                }
+            )
+        )
 
 
 def main() -> None:
