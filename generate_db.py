@@ -37,7 +37,7 @@ def generate_db() -> None:
 
         for movie in actor["known_for_movies"]:
             actors_in_movies[movie] = actors_in_movies.setdefault(movie, set()) | {
-                actor["name"]
+                actor["id"]
             }
 
     print("Adding actors column to movies_data_frame...")
