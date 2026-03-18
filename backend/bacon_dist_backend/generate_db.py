@@ -6,7 +6,7 @@ import polars as pl
 def generate_db() -> None:
     print("Reading movies...")
     movies_data_frame = pl.read_csv(
-        "imdb_api/onek.title.basics.tsv",
+        "../imdb_api/onek.title.basics.tsv",
         separator="\t",
         null_values="\\N",
         quote_char=None,
@@ -16,7 +16,7 @@ def generate_db() -> None:
 
     print("Reading actors...")
     actors_data_frame = pl.read_csv(
-        "imdb_api/onek.name.basics.tsv",
+        "../imdb_api/onek.name.basics.tsv",
         separator="\t",
         null_values="\\N",
         quote_char=None,
@@ -25,8 +25,8 @@ def generate_db() -> None:
     )
 
     print("Splitting known_for_movies into a list...")
-    actors_data_frame = actors_data_frame.with_columns(
-        pl.col("known_for_movies").str.split(by=",")
+    actors_data_frame = actors_data_frame.with_columns( # pyright: ignore[reportUnknownMemberType]
+        pl.col("known_for_movies").str.split(by=",") # pyright: ignore[reportUnknownMemberType]
     )
 
     print("Calculating actors_in_movies dict...")
@@ -42,14 +42,14 @@ def generate_db() -> None:
 
     print("Adding actors column to movies_data_frame...")
 
-    def get_actors_in_movie(movie_id) -> list[str]:
+    def get_actors_in_movie(movie_id: str) -> list[str]:
         actors_list = list(actors_in_movies.setdefault(movie_id, set()))
 
         del actors_in_movies[movie_id]
 
         return actors_list
 
-    movies_data_frame = movies_data_frame.with_columns(
+    movies_data_frame = movies_data_frame.with_columns( # pyright: ignore[reportUnknownMemberType]
         pl.col("id")
         .map_elements(get_actors_in_movie, return_dtype=pl.List(pl.String))
         .alias("actors")

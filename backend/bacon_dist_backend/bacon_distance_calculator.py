@@ -1,8 +1,11 @@
+from collections.abc import Callable
 from decimal import Decimal
 from queue import SimpleQueue
 
-from data_frames_manager import DataFramesManager
-from node import Node, NodeType
+from polars import Series
+
+from bacon_dist_backend.data_frames_manager import DataFramesManager
+from bacon_dist_backend.node import Node, NodeType
 
 
 KEVIN_BACON_NAME = "Kevin Bacon"
@@ -23,7 +26,7 @@ class BaconDistanceCalculator:
         pending_nodes: SimpleQueue[Node] = SimpleQueue()
         discovered_node_ids: list[str] = []
 
-        get_child_ids_by_id = {
+        get_child_ids_by_id: dict[NodeType, Callable[[str], Series]] = {
             NodeType.Actor: df_manager.get_movie_ids_of_actor_by_id,
             NodeType.Movie: df_manager.get_actor_ids_in_movie_by_id,
         }
