@@ -1,9 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from bacon_dist_backend.bacon_distance_calculator import BaconDistanceCalculator
 from bacon_dist_backend.data_frames_manager import DataFramesManager
 
 app = FastAPI()
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 df_manager = DataFramesManager("../db.json")
 
 @app.get("/")
