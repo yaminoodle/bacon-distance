@@ -15,24 +15,31 @@ export const Landing = () => {
     const [actorName, setActorName] = useState("");
     const [baconDistance, setBaconDistance] = useState("");
     const [displayBaconDistance, setDisplayBaconDistance] = useState(false);
+    const [displayError, setDisplayError] = useState(false);
 
     const getActorBaconDistance = () => {
         const actorNameElement = document.getElementById(
             "Actor Name",
         ) as HTMLInputElement;
 
-        setActorName(actorNameElement.value);
+        const actorNameValue = actorNameElement.value;
+
+        if (actorNameValue == "") {
+            setDisplayError(true);
+            return;
+        }
+
+        setDisplayError(false);
+        setActorName(actorNameValue);
         setLoading(true);
 
         axios
-            .get(`http://127.0.0.1:8000/bacon-dist/${actorNameElement.value}`)
+            .get(`http://127.0.0.1:8000/bacon-dist/${actorNameValue}`)
             .then((response) => {
-                console.log(response);
                 setBaconDistance(response.data["bacon_distance"]);
                 setDisplayBaconDistance(true);
             })
             .catch((reason) => {
-                console.error(reason);
                 setDisplayBaconDistance(false);
             })
             .finally(() => {
@@ -43,7 +50,7 @@ export const Landing = () => {
     return (
         <>
             <Container maxWidth="sm">
-                <Grid container sx={{ justifyContent: "center" }}>
+                <Grid container>
                     <Stack spacing={2}>
                         <center>
                             <h1>Bacon Distance Calculator</h1>
@@ -59,7 +66,16 @@ export const Landing = () => {
                             film industry can be linked through their film roles
                             to Bacon within six steps." - Wikipedia
                         </Alert>
-                        <TextField label="Actor Name" id="Actor Name" />
+                        <TextField
+                            label="Actor Name"
+                            id="Actor Name"
+                            error={displayError}
+                            helperText={
+                                displayError
+                                    ? "Please enter an actors name"
+                                    : ""
+                            }
+                        />
                         <Button
                             variant="contained"
                             endIcon={<SendIcon />}
@@ -69,9 +85,11 @@ export const Landing = () => {
                         >
                             Go
                         </Button>
-                        <h2
-                            hidden={!displayBaconDistance}
-                        >{`Bacon distance of ${actorName} is ${baconDistance}`}</h2>
+                        <center>
+                            <h2
+                                hidden={!displayBaconDistance}
+                            >{`Bacon Distance of ${actorName} is ${baconDistance}`}</h2>
+                        </center>
                     </Stack>
                 </Grid>
             </Container>
